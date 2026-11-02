@@ -1,4 +1,5 @@
 import Category from '../models/Category.js';
+import SubCategory from '../models/SubCategory.js';
 import { uploadToCloudinary, deleteFromCloudinary } from '../utils/cloudinaryUpload.js';
 
 // @desc    Get all categories
@@ -106,6 +107,24 @@ export const deleteCategory = async (req, res) => {
           console.error(e);
         }
       }
+      // Delete associated subcategories and their images
+      const subCategories = await SubCategory.find({ category: category._id });
+      for (const sub of subCategories) {
+        if (sub.image && sub.image.public_id) {
+          try {
+            const fs = await import('fs');
+            const path = await import('path');
+            const subFilePath = path.join(process.cwd(), 'uploads', sub.image.public_id);
+            if (fs.existsSync(subFilePath)) {
+              fs.unlinkSync(subFilePath);
+            }
+          } catch (e) {
+            console.error(e);
+          }
+        }
+      }
+      await SubCategory.deleteMany({ category: category._id });
+
       await category.deleteOne();
       res.json({ message: 'Category removed' });
     } else {

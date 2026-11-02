@@ -12,6 +12,7 @@ import AdminLayout from './layouts/AdminLayout';
 import Dashboard from './pages/admin/Dashboard';
 import ProductsManagement from './pages/admin/ProductsManagement';
 import CategoriesManagement from './pages/admin/CategoriesManagement';
+import SubCategoriesManagement from './pages/admin/SubCategoriesManagement';
 import OrdersManagement from './pages/admin/OrdersManagement';
 import UsersManagement from './pages/admin/UsersManagement';
 import OffersManagement from './pages/admin/OffersManagement';
@@ -71,6 +72,7 @@ function App() {
           <Route index element={<Dashboard />} />
           <Route path="products" element={<ProductsManagement />} />
           <Route path="categories" element={<CategoriesManagement />} />
+          <Route path="subcategories" element={<SubCategoriesManagement />} />
           <Route path="offers" element={<OffersManagement />} />
           <Route path="coupons" element={<CouponsManagement />} />
           <Route path="orders" element={<OrdersManagement />} />

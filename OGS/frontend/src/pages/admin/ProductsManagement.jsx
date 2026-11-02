@@ -7,6 +7,7 @@ import toast from 'react-hot-toast';
 const ProductsManagement = () => {
   const [products, setProducts] = useState([]);
   const [categories, setCategories] = useState([]);
+  const [subCategories, setSubCategories] = useState([]);
   const [loading, setLoading] = useState(true);
   
   // Pagination & Filters
@@ -14,13 +15,25 @@ const ProductsManagement = () => {
   const [pages, setPages] = useState(1);
   const [keyword, setKeyword] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('');
+  const [subCategoryFilter, setSubCategoryFilter] = useState('');
 
   const [showAddModal, setShowAddModal] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
   const [editingId, setEditingId] = useState(null);
   
   const [newProduct, setNewProduct] = useState({
-    name: '', sku: '', category: '', price: '', discountPrice: '', stock: '', unit: 'each', description: '', brand: '', status: 'active', isFeatured: false
+    name: '',
+    sku: '',
+    category: '',
+    subCategory: '',
+    price: '',
+    discountPrice: '',
+    stock: '',
+    unit: 'each',
+    description: '',
+    brand: '',
+    status: 'active',
+    isFeatured: false,
   });
   const [imageFiles, setImageFiles] = useState([]);
 
@@ -32,14 +45,17 @@ const ProductsManagement = () => {
       let url = `http://localhost:5000/api/products?pageNumber=${page}&pageSize=10`;
       if (keyword) url += `&keyword=${keyword}`;
       if (categoryFilter) url += `&category=${categoryFilter}`;
+      if (subCategoryFilter) url += `&subCategory=${subCategoryFilter}`;
       
-      const [prodRes, catRes] = await Promise.all([
+      const [prodRes, catRes, subRes] = await Promise.all([
         axios.get(url),
-        axios.get('http://localhost:5000/api/categories')
+        axios.get('http://localhost:5000/api/categories'),
+        axios.get('http://localhost:5000/api/subcategories'),
       ]);
       setProducts(prodRes.data.products);
       setPages(prodRes.data.pages);
       setCategories(catRes.data);
+      setSubCategories(subRes.data);
       setLoading(false);
     } catch (error) {
       console.error(error);
@@ -50,7 +66,7 @@ const ProductsManagement = () => {
 
   useEffect(() => {
     fetchData();
-  }, [page, keyword, categoryFilter]);
+  }, [page, keyword, categoryFilter, subCategoryFilter]);
 
   const handleAddProduct = async (e) => {
     e.preventDefault();
@@ -63,8 +79,13 @@ const ProductsManagement = () => {
     formData.append('name', newProduct.name);
     formData.append('sku', newProduct.sku);
     formData.append('category', newProduct.category);
+    if (newProduct.subCategory) {
+      formData.append('subCategory', newProduct.subCategory);
+    } else {
+      formData.append('subCategory', '');
+    }
     formData.append('price', newProduct.price);
-    if(newProduct.discountPrice) formData.append('discountPrice', newProduct.discountPrice);
+    if (newProduct.discountPrice) formData.append('discountPrice', newProduct.discountPrice);
     formData.append('stock', newProduct.stock);
     formData.append('description', newProduct.description);
     formData.append('brand', newProduct.brand);
@@ -105,7 +126,20 @@ const ProductsManagement = () => {
   const openAddModal = () => {
     setIsEditMode(false);
     setEditingId(null);
-    setNewProduct({ name: '', sku: '', category: '', price: '', discountPrice: '', stock: '', unit: 'each', description: '', brand: '', status: 'active', isFeatured: false });
+    setNewProduct({
+      name: '',
+      sku: '',
+      category: '',
+      subCategory: '',
+      price: '',
+      discountPrice: '',
+      stock: '',
+      unit: 'each',
+      description: '',
+      brand: '',
+      status: 'active',
+      isFeatured: false,
+    });
     setImageFiles([]);
     setShowAddModal(true);
   };
@@ -116,7 +150,8 @@ const ProductsManagement = () => {
     setNewProduct({
       name: product.name,
       sku: product.sku || '',
-      category: product.category?._id || product.category,
+      category: product.category?._id || product.category || '',
+      subCategory: product.subCategory?._id || product.subCategory || '',
       price: product.price,
       discountPrice: product.discountPrice || '',
       stock: product.stock,
@@ -124,7 +159,7 @@ const ProductsManagement = () => {
       description: product.description,
       brand: product.brand,
       status: product.status,
-      isFeatured: product.isFeatured || false
+      isFeatured: product.isFeatured || false,
     });
     setImageFiles([]);
     setShowAddModal(true);
@@ -134,7 +169,20 @@ const ProductsManagement = () => {
     setShowAddModal(false);
     setIsEditMode(false);
     setEditingId(null);
-    setNewProduct({ name: '', sku: '', category: '', price: '', discountPrice: '', stock: '', unit: 'each', description: '', brand: '', status: 'active', isFeatured: false });
+    setNewProduct({
+      name: '',
+      sku: '',
+      category: '',
+      subCategory: '',
+      price: '',
+      discountPrice: '',
+      stock: '',
+      unit: 'each',
+      description: '',
+      brand: '',
+      status: 'active',
+      isFeatured: false,
+    });
     setImageFiles([]);
   };
 
@@ -153,6 +201,10 @@ const ProductsManagement = () => {
     }
   };
 
+  const availableSubCategories = subCategories.filter(
+    (sub) => (sub.category?._id || sub.category) === newProduct.category
+  );
+
   return (
     <div className="space-y-6 relative">
       <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4">
@@ -165,22 +217,41 @@ const ProductsManagement = () => {
               placeholder="Search products..." 
               value={keyword}
               onChange={(e) => setKeyword(e.target.value)}
-              className="pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+              className="pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-sm"
             />
           </div>
           <select 
             value={categoryFilter}
-            onChange={(e) => setCategoryFilter(e.target.value)}
-            className="border border-gray-200 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-primary bg-white"
+            onChange={(e) => {
+              setCategoryFilter(e.target.value);
+              setSubCategoryFilter('');
+            }}
+            className="border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary bg-white text-sm"
           >
             <option value="">All Categories</option>
             {categories.map(c => (
               <option key={c._id} value={c._id}>{c.name}</option>
             ))}
           </select>
+          {categoryFilter && (
+            <select
+              value={subCategoryFilter}
+              onChange={(e) => setSubCategoryFilter(e.target.value)}
+              className="border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary bg-white text-sm"
+            >
+              <option value="">All Sub Categories</option>
+              {subCategories
+                .filter((sub) => (sub.category?._id || sub.category) === categoryFilter)
+                .map((sub) => (
+                  <option key={sub._id} value={sub._id}>
+                    {sub.name}
+                  </option>
+                ))}
+            </select>
+          )}
           <button 
             onClick={openAddModal}
-            className="bg-primary text-white px-4 py-2 rounded-lg flex items-center justify-center gap-2 hover:bg-emerald-600 transition-colors whitespace-nowrap"
+            className="bg-primary text-white px-4 py-2 rounded-lg flex items-center justify-center gap-2 hover:bg-emerald-600 transition-colors whitespace-nowrap text-sm font-medium shadow-sm"
           >
             <FiPlus /> Add Product
           </button>
@@ -195,21 +266,22 @@ const ProductsManagement = () => {
             <div className="overflow-x-auto">
               <table className="w-full text-left border-collapse min-w-max">
                 <thead>
-                  <tr className="bg-gray-50 border-b border-gray-100">
-                    <th className="p-4 font-semibold text-gray-600">Image</th>
-                    <th className="p-4 font-semibold text-gray-600">Product Name</th>
-                    <th className="p-4 font-semibold text-gray-600">SKU</th>
-                    <th className="p-4 font-semibold text-gray-600">Price</th>
-                    <th className="p-4 font-semibold text-gray-600">Stock</th>
-                    <th className="p-4 font-semibold text-gray-600">Status</th>
-                    <th className="p-4 font-semibold text-gray-600 text-right">Actions</th>
+                  <tr className="bg-gray-50 border-b border-gray-100 text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                    <th className="p-4">Image</th>
+                    <th className="p-4">Product Name</th>
+                    <th className="p-4">Category</th>
+                    <th className="p-4">SKU</th>
+                    <th className="p-4">Price</th>
+                    <th className="p-4">Stock</th>
+                    <th className="p-4">Status</th>
+                    <th className="p-4 text-right">Actions</th>
                   </tr>
                 </thead>
-                <tbody>
+                <tbody className="divide-y divide-gray-100 text-sm">
                   {products.length === 0 ? (
-                     <tr><td colSpan="7" className="p-4 text-center text-gray-500">No products found.</td></tr>
+                     <tr><td colSpan="8" className="p-6 text-center text-gray-500">No products found.</td></tr>
                   ) : products.map((product) => (
-                    <tr key={product._id} className="border-b border-gray-50 hover:bg-gray-50/50">
+                    <tr key={product._id} className="hover:bg-gray-50/50 transition-colors">
                       <td className="p-4">
                         {product.images && product.images.length > 0 ? (
                           <img src={product.images[0].url} alt={product.name} className="w-12 h-12 object-cover rounded-lg border border-gray-200" />
@@ -221,10 +293,20 @@ const ProductsManagement = () => {
                         {product.name}
                         {product.isFeatured && <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-yellow-100 text-yellow-800">Featured</span>}
                       </td>
-                      <td className="p-4 text-gray-600 text-sm">{product.sku || '-'}</td>
-                      <td className="p-4 text-gray-600">
+                      <td className="p-4">
+                        <div className="text-gray-800 font-medium text-xs">
+                          {product.category?.name || '—'}
+                        </div>
+                        {product.subCategory && (
+                          <span className="inline-block text-[11px] text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full mt-1">
+                            {product.subCategory.name}
+                          </span>
+                        )}
+                      </td>
+                      <td className="p-4 text-gray-600 text-xs font-mono">{product.sku || '-'}</td>
+                      <td className="p-4 text-gray-700 font-medium">
                         ₹{product.price}
-                        {product.discountPrice > 0 && <span className="ml-1 text-xs line-through text-gray-400">₹{product.discountPrice}</span>}
+                        {product.discountPrice > 0 && <span className="ml-1 text-xs line-through text-gray-400 font-normal">₹{product.discountPrice}</span>}
                       </td>
                       <td className="p-4 text-gray-600">{product.stock}</td>
                       <td className="p-4">
@@ -232,13 +314,15 @@ const ProductsManagement = () => {
                            {product.status}
                          </span>
                       </td>
-                      <td className="p-4 flex gap-2 justify-end items-center h-full">
-                        <button onClick={() => openEditModal(product)} className="p-2 text-blue-500 hover:bg-blue-50 rounded-lg transition-colors">
-                          <FiEdit2 />
-                        </button>
-                        <button onClick={() => handleDelete(product._id)} className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors">
-                          <FiTrash2 />
-                        </button>
+                      <td className="p-4 text-right">
+                        <div className="flex items-center justify-end gap-2">
+                          <button onClick={() => openEditModal(product)} className="p-2 text-blue-500 hover:bg-blue-50 rounded-lg transition-colors">
+                            <FiEdit2 />
+                          </button>
+                          <button onClick={() => handleDelete(product._id)} className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors">
+                            <FiTrash2 />
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -252,7 +336,7 @@ const ProductsManagement = () => {
                   <button
                     key={x + 1}
                     onClick={() => setPage(x + 1)}
-                    className={`px-3 py-1 rounded-md ${page === x + 1 ? 'bg-primary text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
+                    className={`px-3 py-1 rounded-md text-sm ${page === x + 1 ? 'bg-primary text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
                   >
                     {x + 1}
                   </button>
@@ -277,50 +361,78 @@ const ProductsManagement = () => {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Name *</label>
-                  <input type="text" required className="w-full border border-gray-300 rounded-lg p-2.5 focus:ring-primary focus:border-primary" 
+                  <input type="text" required className="w-full border border-gray-300 rounded-lg p-2.5 focus:ring-primary focus:border-primary text-sm" 
                     value={newProduct.name} onChange={e => setNewProduct({...newProduct, name: e.target.value})} />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">SKU</label>
-                  <input type="text" className="w-full border border-gray-300 rounded-lg p-2.5 focus:ring-primary focus:border-primary" 
+                  <input type="text" className="w-full border border-gray-300 rounded-lg p-2.5 focus:ring-primary focus:border-primary text-sm" 
                     value={newProduct.sku} onChange={e => setNewProduct({...newProduct, sku: e.target.value})} />
                 </div>
                 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Category *</label>
-                  <select required className="w-full border border-gray-300 rounded-lg p-2.5 bg-white focus:ring-primary focus:border-primary"
-                    value={newProduct.category} onChange={e => setNewProduct({...newProduct, category: e.target.value})}>
+                  <select
+                    required
+                    className="w-full border border-gray-300 rounded-lg p-2.5 bg-white focus:ring-primary focus:border-primary text-sm"
+                    value={newProduct.category}
+                    onChange={(e) => {
+                      setNewProduct({ ...newProduct, category: e.target.value, subCategory: '' });
+                    }}
+                  >
                     <option value="">Select Category</option>
-                    {categories.map(cat => (
+                    {categories.map((cat) => (
                       <option key={cat._id} value={cat._id}>{cat.name}</option>
                     ))}
                   </select>
                 </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Sub Category <span className="text-xs text-gray-400">(Optional)</span>
+                  </label>
+                  <select
+                    disabled={!newProduct.category}
+                    className="w-full border border-gray-300 rounded-lg p-2.5 bg-white focus:ring-primary focus:border-primary text-sm disabled:bg-gray-100 disabled:text-gray-400"
+                    value={newProduct.subCategory}
+                    onChange={(e) => setNewProduct({ ...newProduct, subCategory: e.target.value })}
+                  >
+                    <option value="">
+                      {!newProduct.category ? 'Select category first' : 'Select Sub Category (None)'}
+                    </option>
+                    {availableSubCategories.map((sub) => (
+                      <option key={sub._id} value={sub._id}>
+                        {sub.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Brand *</label>
-                  <input type="text" required className="w-full border border-gray-300 rounded-lg p-2.5 focus:ring-primary focus:border-primary" 
+                  <input type="text" required className="w-full border border-gray-300 rounded-lg p-2.5 focus:ring-primary focus:border-primary text-sm" 
                     value={newProduct.brand} onChange={e => setNewProduct({...newProduct, brand: e.target.value})} />
                 </div>
                 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Price (₹) *</label>
-                  <input type="number" required min="0" className="w-full border border-gray-300 rounded-lg p-2.5 focus:ring-primary focus:border-primary" 
+                  <input type="number" required min="0" className="w-full border border-gray-300 rounded-lg p-2.5 focus:ring-primary focus:border-primary text-sm" 
                     value={newProduct.price} onChange={e => setNewProduct({...newProduct, price: e.target.value})} />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Discount Price (₹)</label>
-                  <input type="number" min="0" className="w-full border border-gray-300 rounded-lg p-2.5 focus:ring-primary focus:border-primary" 
+                  <input type="number" min="0" className="w-full border border-gray-300 rounded-lg p-2.5 focus:ring-primary focus:border-primary text-sm" 
                     value={newProduct.discountPrice} onChange={e => setNewProduct({...newProduct, discountPrice: e.target.value})} />
                 </div>
                 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Stock *</label>
-                  <input type="number" required min="0" className="w-full border border-gray-300 rounded-lg p-2.5 focus:ring-primary focus:border-primary" 
+                  <input type="number" required min="0" className="w-full border border-gray-300 rounded-lg p-2.5 focus:ring-primary focus:border-primary text-sm" 
                     value={newProduct.stock} onChange={e => setNewProduct({...newProduct, stock: e.target.value})} />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Unit *</label>
-                  <select required className="w-full border border-gray-300 rounded-lg p-2.5 bg-white focus:ring-primary focus:border-primary"
+                  <select required className="w-full border border-gray-300 rounded-lg p-2.5 bg-white focus:ring-primary focus:border-primary text-sm"
                     value={newProduct.unit} onChange={e => setNewProduct({...newProduct, unit: e.target.value})}>
                     <option value="each">Piece (Each)</option>
                     <option value="kg">Kilogram (kg)</option>
@@ -334,7 +446,7 @@ const ProductsManagement = () => {
                 <div className="flex gap-4">
                   <div className="flex-1">
                     <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
-                    <select className="w-full border border-gray-300 rounded-lg p-2.5 bg-white focus:ring-primary focus:border-primary"
+                    <select className="w-full border border-gray-300 rounded-lg p-2.5 bg-white focus:ring-primary focus:border-primary text-sm"
                       value={newProduct.status} onChange={e => setNewProduct({...newProduct, status: e.target.value})}>
                       <option value="active">Active</option>
                       <option value="inactive">Inactive</option>
@@ -351,21 +463,21 @@ const ProductsManagement = () => {
 
                 <div className="md:col-span-2">
                   <label className="block text-sm font-medium text-gray-700 mb-1">Description *</label>
-                  <textarea required rows="3" className="w-full border border-gray-300 rounded-lg p-2.5 focus:ring-primary focus:border-primary" 
+                  <textarea required rows="3" className="w-full border border-gray-300 rounded-lg p-2.5 focus:ring-primary focus:border-primary text-sm" 
                     value={newProduct.description} onChange={e => setNewProduct({...newProduct, description: e.target.value})}></textarea>
                 </div>
                 
                 <div className="md:col-span-2">
                   <label className="block text-sm font-medium text-gray-700 mb-1">Product Images (Multiple allowed) {isEditMode && '(Leave blank to keep current)'}</label>
-                  <input type="file" multiple required={!isEditMode} accept="image/*" onChange={e => setImageFiles(e.target.files)} className="w-full border border-gray-300 rounded-lg p-2.5 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-gray-50 file:text-primary hover:file:bg-gray-100" />
+                  <input type="file" multiple required={!isEditMode} accept="image/*" onChange={e => setImageFiles(e.target.files)} className="w-full border border-gray-300 rounded-lg p-2.5 text-sm file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-gray-50 file:text-primary hover:file:bg-gray-100" />
                 </div>
               </div>
               
               <div className="mt-8 pt-5 border-t border-gray-100 flex justify-end gap-3">
-                <button type="button" onClick={closeModal} className="px-6 py-2.5 border border-gray-300 rounded-lg text-gray-700 font-medium hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary">
+                <button type="button" onClick={closeModal} className="px-6 py-2.5 border border-gray-300 rounded-lg text-gray-700 font-medium text-sm hover:bg-gray-50">
                   Cancel
                 </button>
-                <button type="submit" className="px-6 py-2.5 bg-primary text-white rounded-lg font-medium hover:bg-emerald-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary">
+                <button type="submit" className="px-6 py-2.5 bg-primary text-white rounded-lg font-medium text-sm hover:bg-emerald-600 transition-colors">
                   {isEditMode ? 'Update Product' : 'Save Product'}
                 </button>
               </div>

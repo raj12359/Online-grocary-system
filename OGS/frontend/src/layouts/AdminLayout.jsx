@@ -1,7 +1,7 @@
 import React from 'react';
 import { Outlet, Link, useNavigate } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux';
-import { FiHome, FiUsers, FiBox, FiList, FiSettings, FiLogOut, FiMenu } from 'react-icons/fi';
+import { FiHome, FiUsers, FiBox, FiList, FiLayers, FiSettings, FiLogOut, FiMenu } from 'react-icons/fi';
 import { logout, reset } from '../features/authSlice';
 
 const AdminLayout = () => {
@@ -50,6 +50,11 @@ const AdminLayout = () => {
             <li>
               <Link to="/admin/categories" className="flex items-center px-6 py-3 text-gray-300 hover:bg-gray-800 hover:text-white transition-colors">
                 <FiList className="h-5 w-5 mr-3" /> Categories
+              </Link>
+            </li>
+            <li>
+              <Link to="/admin/subcategories" className="flex items-center px-6 py-3 text-gray-300 hover:bg-gray-800 hover:text-white transition-colors">
+                <FiLayers className="h-5 w-5 mr-3" /> Sub Categories
               </Link>
             </li>
             <li>

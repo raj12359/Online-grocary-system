@@ -1,6 +1,15 @@
 import { createSlice } from '@reduxjs/toolkit';
 
-const cartItems = localStorage.getItem('cartItems') ? JSON.parse(localStorage.getItem('cartItems')) : [];
+let cartItems = [];
+try {
+  const storedCart = localStorage.getItem('cartItems');
+  cartItems = storedCart && storedCart !== 'undefined' && storedCart !== 'null' ? JSON.parse(storedCart) : [];
+  if (!Array.isArray(cartItems)) cartItems = [];
+} catch (e) {
+  console.error('Failed to parse cartItems from localStorage:', e);
+  localStorage.removeItem('cartItems');
+  cartItems = [];
+}
 
 const initialState = {
   cartItems,

@@ -69,6 +69,10 @@ const productSchema = new mongoose.Schema(
       ref: 'Category',
       required: [true, 'Please select a category'],
     },
+    subCategory: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'SubCategory',
+    },
     brand: {
       type: String,
       required: [true, 'Please add a brand'],

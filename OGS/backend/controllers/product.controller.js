@@ -20,6 +20,7 @@ export const getProducts = async (req, res) => {
     const category = req.query.category 
       ? { category: { $in: req.query.category.split(',') } } 
       : {};
+    const subCategory = req.query.subCategory ? { subCategory: req.query.subCategory } : {};
     const brand = req.query.brand ? { brand: req.query.brand } : {};
     const status = req.query.status ? { status: req.query.status } : { status: 'active' };
     const isFeatured = req.query.isFeatured === 'true' ? { isFeatured: true } : {};
@@ -52,7 +53,7 @@ export const getProducts = async (req, res) => {
     const maxPrice = req.query.maxPrice ? Number(req.query.maxPrice) : 99999999;
     const priceFilter = { price: { $gte: minPrice, $lte: maxPrice } };
 
-    const query = { ...keyword, ...category, ...brand, ...status, ...isFeatured, ...hasOffer, ...priceFilter };
+    const query = { ...keyword, ...category, ...subCategory, ...brand, ...status, ...isFeatured, ...hasOffer, ...priceFilter };
 
     // Sorting
     let sort = { createdAt: -1 }; // default sort
@@ -66,6 +67,7 @@ export const getProducts = async (req, res) => {
     const count = await Product.countDocuments(query);
     let products = await Product.find(query)
       .populate('category', 'name')
+      .populate('subCategory', 'name')
       .sort(sort)
       .limit(pageSize)
       .skip(pageSize * (page - 1))
@@ -107,7 +109,7 @@ export const getProducts = async (req, res) => {
 // @access  Public
 export const getProductById = async (req, res) => {
   try {
-    const product = await Product.findById(req.params.id).populate('category', 'name').lean();
+    const product = await Product.findById(req.params.id).populate('category', 'name').populate('subCategory', 'name').lean();
     if (product) {
       const activeOffers = await Offer.find({ isActive: true, expiryDate: { $gte: new Date() } });
       
@@ -138,7 +140,7 @@ export const getProductById = async (req, res) => {
 // @access  Private/Admin
 export const createProduct = async (req, res) => {
   try {
-    const { name, sku, description, price, category, brand, unit, stock, discountPrice, status, isFeatured } = req.body;
+    const { name, sku, description, price, category, subCategory, brand, unit, stock, discountPrice, status, isFeatured } = req.body;
     let images = [];
 
     if (req.files && req.files.length > 0) {
@@ -158,6 +160,7 @@ export const createProduct = async (req, res) => {
       price,
       description,
       category,
+      subCategory: subCategory ? subCategory : undefined,
       brand,
       unit: unit || 'each',
       stock,
@@ -181,7 +184,7 @@ export const createProduct = async (req, res) => {
 // @access  Private/Admin
 export const updateProduct = async (req, res) => {
   try {
-    const { name, sku, description, price, category, brand, unit, stock, discountPrice, status, isFeatured } = req.body;
+    const { name, sku, description, price, category, subCategory, brand, unit, stock, discountPrice, status, isFeatured } = req.body;
 
     const product = await Product.findById(req.params.id);
 
@@ -195,6 +198,7 @@ export const updateProduct = async (req, res) => {
       product.description = description || product.description;
       product.price = price || product.price;
       product.category = category || product.category;
+      if (subCategory !== undefined) product.subCategory = subCategory ? subCategory : undefined;
       product.brand = brand || product.brand;
       product.unit = unit || product.unit;
       product.stock = stock !== undefined ? stock : product.stock;
